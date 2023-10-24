@@ -213,7 +213,7 @@ std::variant<std::vector<EOFCodeType>, EOFValidationError> validate_types(
 }
 
 EOFValidationError validate_instructions(
-    evmc_revision rev, const EOF1Header& header, size_t code_idx, bytes_view container) noexcept
+    evmc_revision rev, const EOF1Header& header, size_t code_idx, bytes_view container, std::set<size_t> &accessed_code_sections) noexcept
 {
     const bytes_view code{header.get_code(container, code_idx)};
     assert(!code.empty());  // guaranteed by EOF headers validation
@@ -241,6 +241,7 @@ EOFValidationError validate_instructions(
             const auto fid = read_uint16_be(&code[i + 1]);
             if (fid >= header.types.size())
                 return EOFValidationError::invalid_code_section_index;
+            accessed_code_sections.insert(fid);
             i += 2;
         }
         else if (op == OP_DATALOADN)
@@ -431,27 +432,6 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
     return max_stack_height;
 }
 
-std::set<size_t> update_accessed_code_sections(
-    std::set<size_t> accessed_code_sections,
-    const EOF1Header& header,
-    size_t code_index,
-    bytes_view container) noexcept
-{
-    const bytes_view code{header.get_code(container, code_index)};
-    for (size_t i = 0; i < code.size(); ++i)
-    {
-        const auto opcode = code[i];
-        if (opcode == OP_CALLF)
-        {
-          const auto fid = read_uint16_be(&code[i + 1]);
-          accessed_code_sections.insert(fid);
-          i += 2;
-        } else
-          i += instr::traits[opcode].immediate_size;
-    }
-    return accessed_code_sections;
-}
-
 std::variant<EOF1Header, EOFValidationError> validate_eof1(
     evmc_revision rev, bytes_view container) noexcept
 {
@@ -486,12 +466,9 @@ std::variant<EOF1Header, EOFValidationError> validate_eof1(
 
     for (size_t code_idx = 0; code_idx < header.code_sizes.size(); ++code_idx)
     {
-        const auto error_instr = validate_instructions(rev, header, code_idx, container);
+        const auto error_instr = validate_instructions(rev, header, code_idx, container, accessed_code_sections);
         if (error_instr != EOFValidationError::success)
             return error_instr;
-
-        accessed_code_sections = update_accessed_code_sections(
-            accessed_code_sections, header, code_idx, container);
 
         if (!validate_rjump_destinations(header.get_code(container, code_idx)))
             return EOFValidationError::invalid_rjump_destination;
