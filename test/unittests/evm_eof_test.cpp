@@ -361,7 +361,10 @@ TEST_P(evm, eof_create3)
 
     rev = EVMC_PRAGUE;
     const auto deploy_data = "abcdef"_hex;
-    const bytecode deploy_container = eof_bytecode(bytecode(OP_INVALID)).data(deploy_data);
+    const auto aux_data = "aabbccddeeff"_hex;
+    const auto deploy_data_size = static_cast<uint16_t>(deploy_data.size() + aux_data.size());
+    const bytecode deploy_container =
+        eof_bytecode(bytecode(OP_INVALID)).data(deploy_data, deploy_data_size);
 
     const auto init_code =
         calldatacopy(0, 0, OP_CALLDATASIZE) + OP_CALLDATASIZE + 0 + OP_RETURNCONTRACT + Opcode{0};
@@ -376,7 +379,6 @@ TEST_P(evm, eof_create3)
     host.call_result.output_size = deploy_container.size();
     host.call_result.create_address = 0xcc010203040506070809010203040506070809ce_address;
 
-    const auto aux_data = "aabbccddeeff"_hex;
     execute(container, aux_data);
     EXPECT_STATUS(EVMC_SUCCESS);
 

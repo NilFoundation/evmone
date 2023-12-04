@@ -97,6 +97,7 @@ private:
     std::vector<bytecode> m_codes;
     std::vector<evmone::EOFCodeType> m_types;
     bytecode m_data;
+    uint16_t m_data_size = 0;
     std::vector<bytecode> m_containers;
 
     /// Constructs EOF header bytes
@@ -139,7 +140,8 @@ private:
         }
 
         // data header
-        const auto data_size = static_cast<uint16_t>(m_data.size());
+        const auto data_size =
+            (m_data_size == 0 ? static_cast<uint16_t>(m_data.size()) : m_data_size);
         out += "04" + big_endian(data_size);
         out += "00";  // terminator
 
@@ -161,9 +163,10 @@ public:
         return *this;
     }
 
-    auto& data(bytecode d)
+    auto& data(bytecode d, uint16_t size = 0)
     {
         m_data = std::move(d);
+        m_data_size = size;
         return *this;
     }
 
