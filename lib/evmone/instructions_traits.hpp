@@ -185,9 +185,9 @@ constexpr inline GasCostTable gas_costs = []() noexcept {
     table[EVMC_PRAGUE][OP_DATASIZE] = 2;
     table[EVMC_PRAGUE][OP_DATACOPY] = 3;
     table[EVMC_EVMMAX][OP_SETUPX] = 3;
-    table[EVMC_EVMMAX][OP_ADDMODX] = 1;
-    table[EVMC_EVMMAX][OP_SUBMODX] = 1;
-    table[EVMC_EVMMAX][OP_MULMODX] = 1;
+    table[EVMC_EVMMAX][OP_ADDMODX] = 0;
+    table[EVMC_EVMMAX][OP_SUBMODX] = 0;
+    table[EVMC_EVMMAX][OP_MULMODX] = 0;
     table[EVMC_EVMMAX][OP_LOADX] = 3;
     table[EVMC_EVMMAX][OP_STOREX] = 3;
 
