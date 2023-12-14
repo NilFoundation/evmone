@@ -593,6 +593,16 @@ inline std::string decode(bytes_view bytecode)
                     it += push_data_size;
                 }
             }
+            else if (size_t imm_data_size = evmone::instr::traits[opcode].immediate_size;
+                     imm_data_size > 0)
+            {
+                const auto imm_data_start = it + 1;
+                imm_data_size = std::min(static_cast<std::size_t>(imm_data_size),
+                    static_cast<std::size_t>(bytecode.end() - imm_data_start));
+
+                s += " + \"" + hex({&*imm_data_start, imm_data_size}) + '"';
+                it += imm_data_size;
+            }
         }
         else
             s += " + \"" + hex(opcode) + '"';
