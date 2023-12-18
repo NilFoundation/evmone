@@ -85,6 +85,29 @@ TEST(state_mpt, branch_node_example1)
     EXPECT_EQ(hex(trie.hash()), "1aaa6f712413b9a115730852323deb5f5d796c29151a60a1f55f41a25354cd26");
 }
 
+TEST(state_mpt, branch_node_of_3)
+{
+    // A trie of single branch node and three leaf nodes with paths of length 2.
+    // The branch node has leaf nodes at positions [0], [1] and [2]. All leafs have path 0.
+    // {0:0 1:0 2:0}
+
+    MPT trie;
+    trie.insert("00"_hex, "X"_b);
+    trie.insert("10"_hex, "Y"_b);
+    trie.insert("20"_hex, "Z"_b);
+    EXPECT_EQ(hex(trie.hash()), "5c5154e8d108dcf8b9946c8d33730ec8178345ce9d36e6feed44f0134515482d");
+}
+
+TEST(state_mpt, leaf_node_with_empty_path)
+{
+    // Both inserted leafs have empty path in the end.
+    // 0:{0:"X", 1:"Y"}
+    MPT trie;
+    trie.insert("00"_hex, "X"_b);
+    trie.insert("01"_hex, "Y"_b);
+    EXPECT_EQ(hex(trie.hash()), "0a923005d10fbd4e571655cec425db7c5091db03c33891224073a55d3abc2415");
+}
+
 TEST(state_mpt, extension_node_example1)
 {
     // A trie of an extension node followed by a branch node with

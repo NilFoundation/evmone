@@ -19,6 +19,13 @@ struct Path
 
     Path() = default;
 
+    /// Constructs a sub-path by copying nibbles from existing path.
+    Path(size_t len, const uint8_t* nibs) noexcept : length{len}
+    {
+        std::copy_n(nibs, length, nibbles);
+    }
+
+    /// Constructs a path from bytes - each byte will produce 2 nibbles in the path.
     explicit Path(bytes_view key) noexcept : length{2 * key.size()}
     {
         assert(length <= std::size(nibbles));
@@ -34,19 +41,7 @@ struct Path
     [[nodiscard]] Path tail(size_t pos) const noexcept
     {
         assert(pos > 0 && pos <= length);  // MPT never requests whole path copy (pos == 0).
-        Path p;
-        p.length = length - pos;
-        std::copy_n(&nibbles[pos], p.length, p.nibbles);
-        return p;
-    }
-
-    [[nodiscard]] Path head(size_t size) const noexcept
-    {
-        assert(size < length);  // MPT never requests whole path copy (size == length).
-        Path p;
-        p.length = size;
-        std::copy_n(nibbles, size, p.nibbles);
-        return p;
+        return {length - pos, &nibbles[pos]};
     }
 
     [[nodiscard]] bytes encode(bool extended) const
@@ -132,12 +127,37 @@ class MPTNode
                                     std::move(br);
     }
 
-    /// Finds the position at witch two paths differ.
-    static size_t mismatch(const Path& p1, const Path& p2) noexcept
+    /// The information how two paths are different.
+    struct MismatchResult
     {
-        assert(p1.length <= p2.length);
-        return static_cast<size_t>(
-            std::mismatch(p1.nibbles, p1.nibbles + p1.length, p2.nibbles).first - p1.nibbles);
+        static constexpr uint8_t invalid = 0xff;
+
+        Path common;                ///< Common prefix.
+        uint8_t nibble1 = invalid;  ///< Mismatched nibble in path 1. Invalid if paths match.
+        uint8_t nibble2 = invalid;  ///< Mismatched nibble in second path.
+        Path tail1;                 ///< Remaining tail after the nibble in path 1.
+        Path tail2;                 ///< Remaining tail after the nibble in path 2.
+    };
+
+    /// Finds the difference between two paths.
+    static MismatchResult mismatch(const Path& p1, const Path& p2) noexcept
+    {
+        assert(p1.length <= p2.length);  // no support for inserting keys of different lengths
+        const auto [it1, it2] = std::mismatch(p1.nibbles, p1.nibbles + p1.length, p2.nibbles);
+
+        const Path common{static_cast<size_t>(it1 - p1.nibbles), p1.nibbles};
+        const auto matched = common.length == p1.length;
+        const auto tail_start = common.length + 1;
+        assert(!matched || p1.length != p2.length);  // matched => paths have different lengths
+        assert(matched || tail_start <= p1.length);  // !matched => tail_start is valid
+
+        return {
+            .common = common,
+            .nibble1 = static_cast<uint8_t>(matched ? MismatchResult::invalid : *it1),
+            .nibble2 = *it2,
+            .tail1 = matched ? Path{} : p1.tail(tail_start),
+            .tail2 = p2.tail(tail_start),
+        };
     }
 
 public:
@@ -160,57 +180,44 @@ void MPTNode::insert(const Path& path, bytes&& value)  // NOLINT(misc-no-recursi
     // in an existing branch node. Otherwise, we need to create new branch node
     // (possibly with an adjusted extended node) and transform existing nodes around it.
 
+    const auto [common, this_idx, insert_idx, this_tail, insert_tail] = mismatch(m_path, path);
+
     switch (m_kind)
     {
     case Kind::branch:
     {
         assert(m_path.length == 0);  // Branch has no path.
-
-        const auto idx = path.nibbles[0];
-        auto& child = m_children[idx];
-        if (!child)
-            child = leaf(path.tail(1), std::move(value));
+        if (auto& child = m_children[insert_idx]; child)
+            child->insert(insert_tail, std::move(value));
         else
-            child->insert(path.tail(1), std::move(value));
+            child = leaf(insert_tail, std::move(value));
         break;
     }
 
     case Kind::ext:
     {
-        assert(m_path.length != 0);  // Ext must have non-empty path.
-
-        const auto mismatch_pos = mismatch(m_path, path);
-
-        if (mismatch_pos == m_path.length)  // Paths match: go into the child.
-            return m_children[0]->insert(path.tail(mismatch_pos), std::move(value));
-
-        const auto orig_idx = m_path.nibbles[mismatch_pos];
-        const auto new_idx = path.nibbles[mismatch_pos];
+        assert(m_path.length != 0);          // Ext must have non-empty path.
+        if (common.length == m_path.length)  // Paths match: go into the child.
+            return m_children[0]->insert(path.tail(common.length), std::move(value));
 
         // The original branch node must be pushed down, possible extended with
         // the adjusted extended node if the path split point is not directly at the branch node.
         // Clang Analyzer bug: https://github.com/llvm/llvm-project/issues/47814
         // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
-        auto orig_branch = optional_ext(m_path.tail(mismatch_pos + 1), std::move(m_children[0]));
-        auto new_leaf = leaf(path.tail(mismatch_pos + 1), std::move(value));
-        *this = ext_branch(m_path.head(mismatch_pos), orig_idx, std::move(orig_branch), new_idx,
-            std::move(new_leaf));
+        auto this_branch = optional_ext(this_tail, std::move(m_children[0]));
+        auto new_leaf = leaf(insert_tail, std::move(value));
+        *this =
+            ext_branch(common, this_idx, std::move(this_branch), insert_idx, std::move(new_leaf));
         break;
     }
 
     case Kind::leaf:
     {
-        assert(m_path.length != 0);  // Leaf must have non-empty path.
-
-        const auto mismatch_pos = mismatch(m_path, path);
-        assert(mismatch_pos != m_path.length);  // Paths must be different.
-
-        const auto orig_idx = m_path.nibbles[mismatch_pos];
-        const auto new_idx = path.nibbles[mismatch_pos];
-        auto orig_leaf = leaf(m_path.tail(mismatch_pos + 1), std::move(m_value));
-        auto new_leaf = leaf(path.tail(mismatch_pos + 1), std::move(value));
-        *this = ext_branch(m_path.head(mismatch_pos), orig_idx, std::move(orig_leaf), new_idx,
-            std::move(new_leaf));
+        assert(m_path.length != 0);              // Leaf must have non-empty path.
+        assert(common.length != m_path.length);  // Paths must be different.
+        auto this_leaf = leaf(this_tail, std::move(m_value));
+        auto new_leaf = leaf(insert_tail, std::move(value));
+        *this = ext_branch(common, this_idx, std::move(this_leaf), insert_idx, std::move(new_leaf));
         break;
     }
 

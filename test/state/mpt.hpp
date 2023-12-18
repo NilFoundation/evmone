@@ -13,6 +13,11 @@ constexpr auto emptyMPTHash =
 
 /// Insert-only Merkle Patricia Trie implementation for getting the root hash
 /// out of (key, value) pairs.
+///
+/// Limitations:
+/// 1. All inserted keys must be of the same length (this is by MTP design?).
+/// 2. Inserted values cannot be updated (by inserting the same key again).
+/// 3. Inserted values cannot be erased.
 class MPT
 {
     std::unique_ptr<class MPTNode> m_root;
