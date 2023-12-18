@@ -13,6 +13,13 @@ constexpr auto emptyMPTHash =
 
 /// Insert-only Merkle Patricia Trie implementation for getting the root hash
 /// out of (key, value) pairs.
+///
+/// Limitations:
+/// 1. The keys must not be longer than 32 bytes.
+/// 2. A key must not be a prefix of another key.
+///    This comes from the spec (Yellow Paper Appendix D) - a branch node cannot store a value.
+/// 3. Inserted values cannot be updated (by inserting the same key again).
+/// 4. Inserted values cannot be erased.
 class MPT
 {
     std::unique_ptr<class MPTNode> m_root;
