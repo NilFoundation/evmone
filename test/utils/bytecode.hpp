@@ -97,6 +97,7 @@ private:
     std::vector<bytecode> m_codes;
     std::vector<evmone::EOFCodeType> m_types;
     bytecode m_data;
+    std::vector<bytecode> m_containers;
 
     /// Constructs EOF header bytes
     bytecode header() const
@@ -105,6 +106,7 @@ private:
         assert(m_codes[0].size() <= std::numeric_limits<uint16_t>::max());
         assert(m_data.size() <= std::numeric_limits<uint16_t>::max());
         assert(m_codes.size() == m_types.size());
+        assert(m_containers.size() <= std::numeric_limits<uint16_t>::max());
 
         constexpr uint8_t version = 0x01;
 
@@ -121,6 +123,19 @@ private:
         {
             const auto code_size = static_cast<uint16_t>(code.size());
             out += big_endian(code_size);
+        }
+
+        // containers header
+        if (!m_containers.empty())
+        {
+            const auto container_count = static_cast<uint16_t>(m_containers.size());
+            out += "03"_hex + big_endian(container_count);
+            for (const auto& container : m_containers)
+            {
+                assert(container.size() <= std::numeric_limits<uint16_t>::max());
+                const auto container_size = static_cast<uint16_t>(container.size());
+                out += big_endian(container_size);
+            }
         }
 
         // data header
@@ -152,12 +167,20 @@ public:
         return *this;
     }
 
+    auto& container(bytecode c)
+    {
+        m_containers.emplace_back(std::move(c));
+        return *this;
+    }
+
     operator bytecode() const
     {
         bytecode out{header()};
         for (const auto& code : m_codes)
             out += code;
         out += m_data;
+        for (const auto& container : m_containers)
+            out += container;
         return out;
     }
 };
@@ -492,6 +515,7 @@ private:
     bytecode m_input = 0;
     bytecode m_input_size = 0;
     bytecode m_salt = 0;
+    uint8_t m_container_index = 0;
 
 public:
     auto& value(bytecode v)
@@ -508,9 +532,17 @@ public:
     }
 
     template <Opcode k = kind>
-    typename std::enable_if<k == OP_CREATE2, create_instruction&>::type salt(bytecode salt)
+    typename std::enable_if<k == OP_CREATE2 || k == OP_CREATE3, create_instruction&>::type salt(
+        bytecode salt)
     {
         m_salt = std::move(salt);
+        return *this;
+    }
+
+    template <Opcode k = kind>
+    typename std::enable_if<k == OP_CREATE3, create_instruction&>::type container(uint8_t index)
+    {
+        m_container_index = index;
         return *this;
     }
 
@@ -519,7 +551,15 @@ public:
         bytecode code;
         if constexpr (kind == OP_CREATE2)
             code += m_salt;
-        code += m_input_size + m_input + m_value + kind;
+        else if constexpr (kind == OP_CREATE3)
+            code += m_input_size + m_input + m_salt;
+
+        if constexpr (kind != OP_CREATE3)
+            code += m_input_size + m_input;
+
+        code += m_value + kind;
+        if constexpr (kind == OP_CREATE3)
+            code += bytecode{bytes{m_container_index}};  // immediate argument
         return code;
     }
 };
@@ -534,6 +574,10 @@ inline auto create2()
     return create_instruction<OP_CREATE2>{};
 }
 
+inline auto create3()
+{
+    return create_instruction<OP_CREATE3>{};
+}
 
 inline std::string hex(Opcode opcode) noexcept
 {
