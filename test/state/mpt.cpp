@@ -11,6 +11,14 @@ namespace evmone::state
 {
 namespace
 {
+/// The MPT node kind.
+enum class Kind : uint8_t
+{
+    leaf,
+    ext,
+    branch
+};
+
 /// The collection of nibbles (4-bit values) representing a path in a MPT.
 struct Path
 {
@@ -32,9 +40,8 @@ struct Path
         size_t i = 0;
         for (const auto b : key)
         {
-            // static_cast is only needed in GCC <= 8.
-            nibbles[i++] = static_cast<uint8_t>(b >> 4);
-            nibbles[i++] = static_cast<uint8_t>(b & 0x0f);
+            nibbles[i++] = b >> 4;
+            nibbles[i++] = b & 0x0f;
         }
     }
 
@@ -44,24 +51,13 @@ struct Path
         return {length - pos, &nibbles[pos]};
     }
 
-    [[nodiscard]] bytes encode(bool extended) const
+    [[nodiscard]] bytes encode(Kind kind) const
     {
-        bytes bs;
         const auto is_even = length % 2 == 0;
-        if (is_even)
-            bs.push_back(0x00);
-        else
-            bs.push_back(0x10 | nibbles[0]);
-        for (size_t i = is_even ? 0 : 1; i < length; ++i)
-        {
-            const auto h = nibbles[i++];
-            const auto l = nibbles[i];
-            assert(h <= 0x0f);
-            assert(l <= 0x0f);
-            bs.push_back(static_cast<uint8_t>((h << 4) | l));
-        }
-        if (!extended)
-            bs[0] |= 0x20;
+        bytes bs{static_cast<uint8_t>(
+            (is_even ? 0x00 : (0x10 | nibbles[0])) | (kind == Kind::leaf ? 0x20 : 0x00))};
+        for (size_t i = is_even ? 0 : 1; i < length; i += 2)
+            bs.push_back(static_cast<uint8_t>((nibbles[i] << 4) | nibbles[i + 1]));
         return bs;
     }
 };
@@ -70,17 +66,10 @@ struct Path
 /// The MPT Node.
 ///
 /// The implementation is based on StackTrie from go-ethereum.
-// clang-tidy bug: https://github.com/llvm/llvm-project/issues/50006
+// TODO(clang-tidy-17): bug https://github.com/llvm/llvm-project/issues/50006
 // NOLINTNEXTLINE(bugprone-reserved-identifier)
 class MPTNode
 {
-    enum class Kind : uint8_t
-    {
-        leaf,
-        ext,
-        branch
-    };
-
     static constexpr size_t num_children = 16;
 
     Kind m_kind = Kind::leaf;
@@ -243,7 +232,7 @@ bytes MPTNode::encode() const  // NOLINT(misc-no-recursion)
     {
     case Kind::leaf:
     {
-        encoded = rlp::encode(m_path.encode(false)) + rlp::encode(m_value);
+        encoded = rlp::encode(m_path.encode(m_kind)) + rlp::encode(m_value);
         break;
     }
     case Kind::branch:
@@ -263,7 +252,7 @@ bytes MPTNode::encode() const  // NOLINT(misc-no-recursion)
     }
     case Kind::ext:
     {
-        encoded = rlp::encode(m_path.encode(true)) + encode_child(*m_children[0]);
+        encoded = rlp::encode(m_path.encode(m_kind)) + encode_child(*m_children[0]);
         break;
     }
     }
