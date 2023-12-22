@@ -79,3 +79,16 @@ TEST_F(state_transition, create_collision_revert)
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce;
     expect.post[CREATED].nonce = pre.get(CREATED).nonce;
 }
+
+TEST_F(state_transition, create_prefunded_revert)
+{
+    static constexpr auto CREATED = 0x8bbc3514477d75ec797bbe4e19d7961660bb849c_address;
+
+    tx.to = To;
+    pre.insert(*tx.to, {.code = create() + OP_INVALID});
+    pre.insert(CREATED, {.balance = 2});
+
+    expect.status = EVMC_INVALID_INSTRUCTION;
+    expect.post[*tx.to].nonce = pre.get(*tx.to).nonce;
+    expect.post[CREATED].nonce = pre.get(CREATED).nonce;
+}
