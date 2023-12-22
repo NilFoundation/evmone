@@ -135,7 +135,7 @@ public:
     }
 
     /// Touches (as in EIP-161) an existing account or inserts new erasable account.
-    Account& touch(const address& addr);
+    Account& touch(evmc_revision rev, const address& addr);
 
     [[nodiscard]] auto& get_accounts() noexcept { return m_accounts; }
 

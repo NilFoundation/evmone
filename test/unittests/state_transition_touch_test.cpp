@@ -20,6 +20,7 @@ TEST_F(state_transition, touch_empty_sd)
     expect.post[*tx.to].exists = true;
     expect.post[EMPTY].exists = false;
 }
+
 TEST_F(state_transition, touch_empty_tw)
 {
     rev = EVMC_TANGERINE_WHISTLE;  // no touching
@@ -31,6 +32,18 @@ TEST_F(state_transition, touch_empty_tw)
 
     expect.post[*tx.to].exists = true;
     expect.post[EMPTY].exists = true;
+}
+
+TEST_F(state_transition, touch_nonexistent_tw)
+{
+    rev = EVMC_TANGERINE_WHISTLE;  // no touching
+    static constexpr auto NONEXISTENT = 0x4e_address;
+
+    tx.to = To;
+    pre.insert(*tx.to, {.code = call(NONEXISTENT)});
+
+    expect.post[*tx.to].exists = true;
+    expect.post[NONEXISTENT].exists = true;
 }
 
 TEST_F(state_transition, touch_revert_empty)
