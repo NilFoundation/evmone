@@ -78,7 +78,12 @@ Account& State::touch(evmc_revision rev, const address& addr)
     const auto acc = find(addr);
     if (acc == nullptr)
     {
-        return insert(addr, {.erasable = rev >= EVMC_SPURIOUS_DRAGON});
+        auto& a2 = insert(addr);
+        if (rev >= EVMC_SPURIOUS_DRAGON)
+            a2.erasable = true;
+        else
+            journal_create(addr, false);
+        return a2;
     }
     else if (!acc->erasable && acc->is_empty() && rev >= EVMC_SPURIOUS_DRAGON)
     {
