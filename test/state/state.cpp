@@ -75,7 +75,7 @@ evmc_message build_message(const Transaction& tx, int64_t execution_gas_limit) n
 
 Account& State::touch(const address& addr)
 {
-    auto& acc = get_or_insert(addr);
+    auto& acc = get_or_insert(addr, {.erasable = true});
     if (!acc.erasable)
     {
         acc.erasable = true;
