@@ -46,6 +46,19 @@ TEST_F(state_transition, touch_nonexistent_tw)
     expect.post[NONEXISTENT].exists = true;
 }
 
+TEST_F(state_transition, touch_nonempty_tw)
+{
+    rev = EVMC_TANGERINE_WHISTLE;  // no touching
+    static constexpr auto WITH_BALANCE = 0xba_address;
+
+    tx.to = To;
+    pre.insert(*tx.to, {.code = call(WITH_BALANCE)});
+    pre.insert(WITH_BALANCE, {.balance = 1});
+
+    expect.post[*tx.to].exists = true;
+    expect.post[WITH_BALANCE].exists = true;
+}
+
 TEST_F(state_transition, touch_revert_empty)
 {
     rev = EVMC_ISTANBUL;  // avoid handling account access (Berlin)
@@ -84,4 +97,18 @@ TEST_F(state_transition, touch_revert_nonexistent_tw)
     expect.status = EVMC_INVALID_INSTRUCTION;
     expect.post[*tx.to].exists = true;
     expect.post[EMPTY].exists = false;
+}
+
+TEST_F(state_transition, touch_revert_nonempty_tw)
+{
+    rev = EVMC_TANGERINE_WHISTLE;  // no touching
+    static constexpr auto WITH_BALANCE = 0xba_address;
+
+    tx.to = To;
+    pre.insert(*tx.to, {.code = call(WITH_BALANCE) + OP_INVALID});
+    pre.insert(WITH_BALANCE, {.balance = 1});
+
+    expect.status = EVMC_INVALID_INSTRUCTION;
+    expect.post[*tx.to].exists = true;
+    expect.post[WITH_BALANCE].exists = true;
 }
