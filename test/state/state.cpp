@@ -80,7 +80,7 @@ Account& State::touch(const address& addr)
     {
         return insert(addr, {.erasable = true});
     }
-    else if (!acc->erasable)
+    else if (!acc->erasable && acc->is_empty())
     {
         acc->erasable = true;
         m_journal.emplace_back(JournalTouched{addr});
