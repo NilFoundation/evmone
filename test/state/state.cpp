@@ -120,21 +120,11 @@ void State::rollback(size_t checkpoint)
                 }
                 else if constexpr (std::is_same_v<T, JournalCreate>)
                 {
-                    if (e.existed)
-                    {
-                        // This account is not always "touched". TODO: Why?
-                        // We also cannot mark as erasable. ???
-                        auto& a = get(e.addr);
-                        a.nonce = 0;
-                        a.code.clear();
-                    }
-                    else
-                    {
-                        auto& a = get(e.addr);
-                        a.nonce = 0;
-                        a.code.clear();
-                        a.erasable = true;
-                    }
+                    auto& a = get(e.addr);
+                    a.nonce = 0;
+                    a.code.clear();
+                    if (!e.existed)
+                        a.erasable = true;  // Before Dragon.
                 }
                 else if constexpr (std::is_same_v<T, JournalStorageChange>)
                 {
