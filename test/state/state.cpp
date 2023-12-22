@@ -73,6 +73,18 @@ evmc_message build_message(const Transaction& tx, int64_t execution_gas_limit) n
 }
 }  // namespace
 
+Account& State::touch(const address& addr)
+{
+    auto& acc = get_or_insert(addr);
+    if (!acc.erasable)
+    {
+        acc.erasable = true;
+        m_journal.emplace_back(JournalTouched{addr});
+        JournalStats::inst().counters[touched].all += 1;
+    }
+    return acc;
+}
+
 void State::rollback(size_t checkpoint)
 {
     while (m_journal.size() != checkpoint)

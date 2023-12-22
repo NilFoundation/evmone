@@ -135,17 +135,7 @@ public:
     }
 
     /// Touches (as in EIP-161) an existing account or inserts new erasable account.
-    Account& touch(const address& addr)
-    {
-        auto& acc = get_or_insert(addr);
-        if (!acc.erasable)
-        {
-            acc.erasable = true;
-            m_journal.emplace_back(JournalTouched{addr});
-            JournalStats::inst().counters[touched].all += 1;
-        }
-        return acc;
-    }
+    Account& touch(const address& addr);
 
     [[nodiscard]] auto& get_accounts() noexcept { return m_accounts; }
 
