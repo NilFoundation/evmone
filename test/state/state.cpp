@@ -118,17 +118,17 @@ void State::rollback(size_t checkpoint)
                     if (e.existed)
                     {
                         // This account is not always "touched". TODO: Why?
+                        // We also cannot mark as erasable. ???
                         auto& a = get(e.addr);
                         a.nonce = 0;
                         a.code.clear();
                     }
                     else
                     {
-                        // TODO: Before Spurious Dragon we don't clear empty accounts ("erasable")
-                        //       so we need to delete them here explicitly.
-                        //       This should be changed by tuning "erasable" flag
-                        //       and clear in all revisions.
-                        m_accounts.erase(e.addr);
+                        auto& a = get(e.addr);
+                        a.nonce = 0;
+                        a.code.clear();
+                        a.erasable = true;
                     }
                 }
                 else if constexpr (std::is_same_v<T, JournalStorageChange>)
