@@ -75,14 +75,18 @@ evmc_message build_message(const Transaction& tx, int64_t execution_gas_limit) n
 
 Account& State::touch(const address& addr)
 {
-    auto& acc = get_or_insert(addr, {.erasable = true});
-    if (!acc.erasable)
+    const auto acc = find(addr);
+    if (acc == nullptr)
     {
-        acc.erasable = true;
+        return insert(addr, {.erasable = true});
+    }
+    else if (!acc->erasable)
+    {
+        acc->erasable = true;
         m_journal.emplace_back(JournalTouched{addr});
         JournalStats::inst().counters[touched].all += 1;
     }
-    return acc;
+    return *acc;
 }
 
 void State::rollback(size_t checkpoint)
