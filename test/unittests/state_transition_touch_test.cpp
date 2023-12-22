@@ -112,3 +112,19 @@ TEST_F(state_transition, touch_revert_nonempty_tw)
     expect.post[*tx.to].exists = true;
     expect.post[WITH_BALANCE].exists = true;
 }
+
+TEST_F(state_transition, touch_revert_selfdestruct_to_nonexistient_tw)
+{
+    rev = EVMC_TANGERINE_WHISTLE;  // no touching
+    static constexpr auto DESTRUCTOR = 0xde_address;
+    static constexpr auto BENEFICIARY = 0xbe_address;
+
+    tx.to = To;
+    pre.insert(*tx.to, {.code = call(DESTRUCTOR).gas(0xffff) + OP_INVALID});
+    pre.insert(DESTRUCTOR, {.code = selfdestruct(BENEFICIARY)});
+
+    expect.status = EVMC_INVALID_INSTRUCTION;
+    expect.post[*tx.to].exists = true;
+    expect.post[DESTRUCTOR].exists = true;
+    expect.post[BENEFICIARY].exists = false;
+}
