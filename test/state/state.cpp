@@ -9,6 +9,7 @@
 #include "rlp.hpp"
 #include <evmone/evmone.h>
 #include <evmone/execution_state.hpp>
+#include <iostream>
 
 namespace evmone::state
 {
@@ -76,6 +77,7 @@ void State::rollback(size_t checkpoint)
 {
     while (m_journal.size() != checkpoint)
     {
+        JournalStats::inst().counters[m_journal.back().index()].reverted += 1;
         std::visit(
             [this](const auto& e) {
                 using T = std::decay_t<decltype(e)>;
@@ -137,6 +139,19 @@ void State::rollback(size_t checkpoint)
             m_journal.back());
         m_journal.pop_back();
     }
+}
+
+JournalStats& JournalStats::inst() noexcept
+{
+    static JournalStats instance;
+    return instance;
+}
+
+JournalStats::~JournalStats()
+{
+    size_t i = 0;
+    for (const auto& c : counters)
+        std::cerr << (i++) << ":\t" << c.all << '\t' << c.reverted << '\n';
 }
 
 intx::uint256 compute_blob_gas_price(uint64_t excess_blob_gas) noexcept

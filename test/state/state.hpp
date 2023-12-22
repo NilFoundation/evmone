@@ -58,6 +58,36 @@ using JournalEntry =
     std::variant<JournalBalanceChange, JournalTouched, JournalStorageChange, JournalNonceBump,
         JournalCreate, JournalTransientStorageChange, JournalDestruct, JournalAccessAccount>;
 
+enum JournalEntryKind : size_t
+{
+    balance,
+    touched,
+    storage,
+    nonce,
+    create,
+    tstorage,
+    destruct,
+    access,
+
+    SIZE
+};
+
+class JournalStats
+{
+    struct Entry
+    {
+        uint32_t all = 0;
+        uint32_t reverted = 0;
+    };
+
+    ~JournalStats();
+
+public:
+    static JournalStats& inst() noexcept;
+
+    Entry counters[JournalEntryKind::SIZE];
+};
+
 /// The Ethereum State: the collection of accounts mapped by their addresses.
 ///
 /// TODO: This class is copyable for testing. Consider making it non-copyable.
@@ -112,6 +142,7 @@ public:
         {
             acc.erasable = true;
             m_journal.emplace_back(JournalTouched{addr});
+            JournalStats::inst().counters[touched].all += 1;
         }
         return acc;
     }
@@ -123,32 +154,45 @@ public:
     void journal_balance_change(const address& addr, const intx::uint256& prev_balance)
     {
         m_journal.emplace_back(JournalBalanceChange{{addr}, prev_balance});
+        JournalStats::inst().counters[balance].all += 1;
     }
 
     void journal_storage_change(const address& addr, const bytes32& key, const StorageValue& value)
     {
         m_journal.emplace_back(
             JournalStorageChange{{addr}, key, value.current, value.access_status});
+        JournalStats::inst().counters[storage].all += 1;
     }
 
     void journal_transient_storage_change(
         const address& addr, const bytes32& key, const bytes32& value)
     {
         m_journal.emplace_back(JournalTransientStorageChange{{addr}, key, value});
+        JournalStats::inst().counters[tstorage].all += 1;
     }
 
-    void journal_bump_nonce(const address& addr) { m_journal.emplace_back(JournalNonceBump{addr}); }
+    void journal_bump_nonce(const address& addr)
+    {
+        m_journal.emplace_back(JournalNonceBump{addr});
+        JournalStats::inst().counters[nonce].all += 1;
+    }
 
     void journal_create(const address& addr, bool existed)
     {
         m_journal.emplace_back(JournalCreate{{addr}, existed});
+        JournalStats::inst().counters[create].all += 1;
     }
 
-    void journal_destruct(const address& addr) { m_journal.emplace_back(JournalDestruct{addr}); }
+    void journal_destruct(const address& addr)
+    {
+        m_journal.emplace_back(JournalDestruct{addr});
+        JournalStats::inst().counters[destruct].all += 1;
+    }
 
     void journal_access_account(const address& addr)
     {
         m_journal.emplace_back(JournalAccessAccount{addr});
+        JournalStats::inst().counters[access].all += 1;
     }
 
     /// Returns the state journal checkpoint. It can be later used to in rollback()
