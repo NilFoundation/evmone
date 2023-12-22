@@ -64,7 +64,7 @@ enum JournalEntryKind : size_t
     touched,
     storage,
     nonce,
-    create,
+    jcreate,
     tstorage,
     destruct,
     access,
@@ -170,7 +170,7 @@ public:
     void journal_create(const address& addr, bool existed)
     {
         m_journal.emplace_back(JournalCreate{{addr}, existed});
-        JournalStats::inst().counters[create].all += 1;
+        JournalStats::inst().counters[jcreate].all += 1;
     }
 
     void journal_destruct(const address& addr)
