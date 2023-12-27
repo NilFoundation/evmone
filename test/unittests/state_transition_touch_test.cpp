@@ -113,6 +113,36 @@ TEST_F(state_transition, touch_revert_nonempty_tw)
     expect.post[WITH_BALANCE].exists = true;
 }
 
+TEST_F(state_transition, touch_revert_nonexistent_touch_again_tw)
+{
+    rev = EVMC_TANGERINE_WHISTLE;  // no touching
+    static constexpr auto EMPTY = 0xee_address;
+    static constexpr auto REVERT_PROXY = 0x94_address;
+
+    tx.to = To;
+    pre.insert(REVERT_PROXY, {.code = call(EMPTY) + OP_INVALID});
+    pre.insert(*tx.to, {.code = call(REVERT_PROXY).gas(0xffff) + call(EMPTY)});
+
+    expect.post[*tx.to].exists = true;
+    expect.post[REVERT_PROXY].exists = true;
+    expect.post[EMPTY].exists = true;
+}
+
+TEST_F(state_transition, touch_touch_revert_nonexistent_tw)
+{
+    rev = EVMC_TANGERINE_WHISTLE;  // no touching
+    static constexpr auto EMPTY = 0xee_address;
+    static constexpr auto REVERT_PROXY = 0x94_address;
+
+    tx.to = To;
+    pre.insert(REVERT_PROXY, {.code = call(EMPTY) + OP_INVALID});
+    pre.insert(*tx.to, {.code = call(EMPTY) + call(REVERT_PROXY).gas(0xffff)});
+
+    expect.post[*tx.to].exists = true;
+    expect.post[REVERT_PROXY].exists = true;
+    expect.post[EMPTY].exists = true;
+}
+
 TEST_F(state_transition, touch_revert_selfdestruct_to_nonexistient_tw)
 {
     rev = EVMC_TANGERINE_WHISTLE;  // no touching
