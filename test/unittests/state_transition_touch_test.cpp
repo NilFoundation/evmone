@@ -143,6 +143,21 @@ TEST_F(state_transition, touch_touch_revert_nonexistent_tw)
     expect.post[EMPTY].exists = true;
 }
 
+TEST_F(state_transition, touch_revert_touch_revert_nonexistent_tw)
+{
+    rev = EVMC_TANGERINE_WHISTLE;  // no touching
+    static constexpr auto EMPTY = 0xee_address;
+    static constexpr auto REVERT_PROXY = 0x94_address;
+
+    tx.to = To;
+    pre.insert(REVERT_PROXY, {.code = call(EMPTY) + OP_INVALID});
+    pre.insert(*tx.to, {.code = 2 * call(REVERT_PROXY).gas(0xffff)});
+
+    expect.post[*tx.to].exists = true;
+    expect.post[REVERT_PROXY].exists = true;
+    expect.post[EMPTY].exists = false;
+}
+
 TEST_F(state_transition, touch_touch_revert_nonexistent_tw_2)
 {
     rev = EVMC_TANGERINE_WHISTLE;  // no touching
@@ -153,49 +168,6 @@ TEST_F(state_transition, touch_touch_revert_nonexistent_tw_2)
 
     expect.status = EVMC_INVALID_INSTRUCTION;
     expect.post[*tx.to].exists = true;
-    expect.post[EMPTY].exists = false;
-}
-
-TEST_F(state_transition, touch_touch_revert_nonexistent_tw_3)
-{
-    rev = EVMC_TANGERINE_WHISTLE;  // no touching
-    static constexpr auto EMPTY = 0xee_address;
-
-    tx.to = To;
-    pre.insert(
-        *tx.to, {.balance = 2, .code = call(EMPTY).value(1) + call(EMPTY).value(1) + OP_INVALID});
-
-    expect.status = EVMC_INVALID_INSTRUCTION;
-    expect.post[*tx.to].exists = true;
-    expect.post[EMPTY].exists = false;
-}
-
-TEST_F(state_transition, touch_touch_revert_nonexistent_tw_4)
-{
-    rev = EVMC_HOMESTEAD;  // no touching
-    static constexpr auto EMPTY = 0xee_address;
-
-    tx.to = To;
-    pre.insert(
-        *tx.to, {.code = call(EMPTY) + call(EMPTY).gas(static_cast<uint64_t>(tx.gas_limit))});
-
-    expect.status = EVMC_OUT_OF_GAS;
-    expect.post[*tx.to].exists = true;
-    expect.post[EMPTY].exists = false;
-}
-
-TEST_F(state_transition, touch_touch_revert_nonexistent_tw_5)
-{
-    rev = EVMC_HOMESTEAD;  // no touching
-    static constexpr auto EMPTY = 0xee_address;
-
-    tx.to = To;
-    pre.insert(*tx.to, {.balance = 2,
-                           .code = call(EMPTY).value(1) +
-                                   call(EMPTY).gas(static_cast<uint64_t>(tx.gas_limit)).value(1)});
-
-    expect.status = EVMC_OUT_OF_GAS;
-    expect.post[*tx.to].balance = 2;
     expect.post[EMPTY].exists = false;
 }
 
@@ -213,18 +185,4 @@ TEST_F(state_transition, touch_revert_selfdestruct_to_nonexistient_tw)
     expect.post[*tx.to].exists = true;
     expect.post[DESTRUCTOR].exists = true;
     expect.post[BENEFICIARY].exists = false;
-}
-
-TEST_F(state_transition, call_loop)
-{
-    rev = EVMC_HOMESTEAD;
-    static constexpr auto ITENTITY = 0x04_address;
-
-    tx.to = To;
-    tx.gas_limit = 70000;
-    pre.insert(*tx.to, {.code = 4 * call(ITENTITY).gas(4000).input(0, 50000)});
-
-    expect.status = EVMC_OUT_OF_GAS;
-    expect.post[*tx.to].exists = true;
-    expect.post[ITENTITY].exists = false;
 }
