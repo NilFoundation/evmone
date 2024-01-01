@@ -92,7 +92,10 @@ Account& State::touch(evmc_revision rev, const address& addr)
         JournalStats::inst().counters[touched].all += 1;
     }
     else if (acc->erasable && rev < EVMC_SPURIOUS_DRAGON)
+    {
         acc->erasable = false;
+        journal_create(addr, false);
+    }
     return *acc;
 }
 
