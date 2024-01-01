@@ -143,6 +143,62 @@ TEST_F(state_transition, touch_touch_revert_nonexistent_tw)
     expect.post[EMPTY].exists = true;
 }
 
+TEST_F(state_transition, touch_touch_revert_nonexistent_tw_2)
+{
+    rev = EVMC_TANGERINE_WHISTLE;  // no touching
+    static constexpr auto EMPTY = 0xee_address;
+
+    tx.to = To;
+    pre.insert(*tx.to, {.code = call(EMPTY) + call(EMPTY) + OP_INVALID});
+
+    expect.status = EVMC_INVALID_INSTRUCTION;
+    expect.post[*tx.to].exists = true;
+    expect.post[EMPTY].exists = false;
+}
+
+TEST_F(state_transition, touch_touch_revert_nonexistent_tw_3)
+{
+    rev = EVMC_TANGERINE_WHISTLE;  // no touching
+    static constexpr auto EMPTY = 0xee_address;
+
+    tx.to = To;
+    pre.insert(
+        *tx.to, {.balance = 2, .code = call(EMPTY).value(1) + call(EMPTY).value(1) + OP_INVALID});
+
+    expect.status = EVMC_INVALID_INSTRUCTION;
+    expect.post[*tx.to].exists = true;
+    expect.post[EMPTY].exists = false;
+}
+
+TEST_F(state_transition, touch_touch_revert_nonexistent_tw_4)
+{
+    rev = EVMC_HOMESTEAD;  // no touching
+    static constexpr auto EMPTY = 0xee_address;
+
+    tx.to = To;
+    pre.insert(
+        *tx.to, {.code = call(EMPTY) + call(EMPTY).gas(static_cast<uint64_t>(tx.gas_limit))});
+
+    expect.status = EVMC_OUT_OF_GAS;
+    expect.post[*tx.to].exists = true;
+    expect.post[EMPTY].exists = false;
+}
+
+TEST_F(state_transition, touch_touch_revert_nonexistent_tw_5)
+{
+    rev = EVMC_HOMESTEAD;  // no touching
+    static constexpr auto EMPTY = 0xee_address;
+
+    tx.to = To;
+    pre.insert(*tx.to, {.balance = 2,
+                           .code = call(EMPTY).value(1) +
+                                   call(EMPTY).gas(static_cast<uint64_t>(tx.gas_limit)).value(1)});
+
+    expect.status = EVMC_OUT_OF_GAS;
+    expect.post[*tx.to].balance = 2;
+    expect.post[EMPTY].exists = false;
+}
+
 TEST_F(state_transition, touch_revert_selfdestruct_to_nonexistient_tw)
 {
     rev = EVMC_TANGERINE_WHISTLE;  // no touching
