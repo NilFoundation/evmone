@@ -214,3 +214,20 @@ TEST_F(state_transition, touch_revert_selfdestruct_to_nonexistient_tw)
     expect.post[DESTRUCTOR].exists = true;
     expect.post[BENEFICIARY].exists = false;
 }
+
+TEST_F(state_transition, call_loop)
+{
+    rev = EVMC_HOMESTEAD;
+    static constexpr auto EMPTY = 0x04_address;
+
+    tx.to = To;
+    tx.gas_limit = 150000;
+    pre.insert(*tx.to,
+        {.balance = 0xfffffffffffff,
+            .code =
+                "5b61c3506080511015602c576000600061c35060006001600461061cf16000556001608051016080526000565b608051600155"_hex});
+
+    expect.status = EVMC_OUT_OF_GAS;
+    expect.post[*tx.to].exists = true;
+    expect.post[EMPTY].exists = false;
+}
