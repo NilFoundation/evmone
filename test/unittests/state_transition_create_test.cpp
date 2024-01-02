@@ -33,6 +33,16 @@ TEST_F(state_transition, create_tx)
     expect.post[create_address].code = bytes{0xFE};
 }
 
+TEST_F(state_transition, create_tx_failure)
+{
+    static constexpr auto create_address = 0x3442a1dec1e72f337007125aa67221498cdd759d_address;
+
+    tx.data = bytecode{} + OP_INVALID;
+
+    expect.status = EVMC_INVALID_INSTRUCTION;
+    expect.post[create_address].exists = false;
+}
+
 TEST_F(state_transition, create2_max_nonce)
 {
     // The address to be created by CREATE2 of the "To" sender and empty initcode.
