@@ -314,9 +314,7 @@ EOFValidationError validate_instructions(evmc_revision rev, const EOF1Header& he
                 if (container_idx >= header.container_sizes.size())
                     return EOFValidationError::invalid_container_section_index;
 
-                if (op == OP_CREATE3 && subcontainer_headers[container_idx].data_offset +
-                                                subcontainer_headers[container_idx].data_size !=
-                                            header.container_sizes[container_idx])
+                if (op == OP_CREATE3 && !subcontainer_headers[container_idx].can_init())
                     return EOFValidationError::create3_with_truncated_container;
 
                 ++i;
@@ -578,8 +576,8 @@ std::variant<EOF1Header, EOFValidationError> validate_eof1(  // NOLINT(misc-no-r
     }
     const auto data_offset = static_cast<uint16_t>(offset);
 
-    EOF1Header header{container[2], code_sizes, code_offsets, data_size, data_offset,
-        container_sizes, container_offsets, types};
+    EOF1Header header{container[2], container.size(), code_sizes, code_offsets, data_size,
+        data_offset, container_sizes, container_offsets, types};
 
     std::vector<EOF1Header> subcontainer_headers;
     for (size_t subcont_idx = 0; subcont_idx < header.container_sizes.size(); ++subcont_idx)
@@ -685,6 +683,7 @@ EOF1Header read_valid_eof1_header(bytes_view container)
     EOF1Header header;
 
     header.version = container[2];
+    header.size = container.size();
 
     for (auto type_offset = header_size;
          type_offset < header_size + section_headers[TYPE_SECTION][0]; type_offset += 4)

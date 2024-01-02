@@ -32,6 +32,9 @@ struct EOF1Header
     /// The EOF version, 0 means legacy code.
     uint8_t version = 0;
 
+    /// Overall size of container. NOTE: Not part of EOFv1 container header.
+    size_t size;
+
     /// Size of every code section.
     std::vector<uint16_t> code_sizes;
 
@@ -66,11 +69,10 @@ struct EOF1Header
     }
 
     /// A helper to check whether the container can be an initcontainer.
-    [[nodiscard]] bool can_init(bytes_view container) const noexcept
+    [[nodiscard]] bool can_init() const noexcept
     {
         // Containers with truncated data section cannot be initcontainers.
-        const auto truncated_data =
-            static_cast<size_t>(data_offset + data_size) != container.size();
+        const auto truncated_data = static_cast<size_t>(data_offset + data_size) != size;
         return !truncated_data;
     }
 
