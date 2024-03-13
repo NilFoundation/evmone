@@ -60,6 +60,7 @@ inline evmc_status_code impl(AdvancedExecutionState& state) noexcept
     const auto status = CoreFn(state.stack.top_item, state.gas_left, state);
     state.gas_left = status.gas_left;
     state.stack.top_item += instr::traits[Op].stack_height_change;
+    state.dyn_stack_pop = static_cast<unsigned>(status.stack_pop);
     return status.status;
 }
 

@@ -78,6 +78,7 @@ public:
             {
                 return raise_error("unsupported");
             }
+            length = 0;
             for (; ch == 'l'; ch = FetchChar())
             {
                 length++;
