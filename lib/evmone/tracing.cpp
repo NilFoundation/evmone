@@ -194,7 +194,14 @@ private:
 
         if (!first)
         {
-            if ( stack_height != 0)
+            if (m_last_opcode == Opcode::OP_PRINTF)
+            {
+                // Store number of stack elements consumed by printf instruction in the first byte.
+                const char s[32] = {char(state.dyn_stack_pop), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+                m_out.write(s, 32);
+            }
+            else if ( stack_height != 0)
             {
                 m_out.write((const char*)&stack_top[0], stack_top->num_bits/8);
             }

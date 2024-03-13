@@ -69,4 +69,5 @@ TEST(fprinter, common) {
     TestPrintf("Test: {%#x}", 0x1234567890abc);
     TestPrintf("Test: {%4u}", 5);
     TestPrintf("Test: {%04u}", 5);
+    TestPrintf("Test: {%llu} {%llu}", 0x1234567890abc, 456);
 }
