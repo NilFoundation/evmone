@@ -156,6 +156,12 @@ public:
         return accounts.count(addr) != 0;
     }
 
+    /// Get the global config value at the given key (EVMC Host method).
+    bytes32 get_config(const address& addr, const bytes32& key) const noexcept override
+    {
+        return {};
+    }
+
     /// Get the account's storage value at the given key (EVMC Host method).
     bytes32 get_storage(const address& addr, const bytes32& key) const noexcept override
     {

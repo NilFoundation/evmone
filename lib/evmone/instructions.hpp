@@ -712,6 +712,8 @@ Result sload(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept;
 
 Result sstore(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept;
 
+Result cload(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept;
+
 /// Internal jump implementation for JUMP/JUMPI instructions.
 inline code_iterator jump_impl(ExecutionState& state, const uint256& dst) noexcept
 {

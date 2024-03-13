@@ -869,6 +869,9 @@ struct evmc_host_interface
 
     /** Set transient storage callback function. */
     evmc_set_transient_storage_fn set_transient_storage;
+
+    /** Get config callback function. */
+    evmc_get_storage_fn get_config;
 };
 
 
