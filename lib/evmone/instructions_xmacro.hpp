@@ -130,6 +130,7 @@
     ON_OPCODE_IDENTIFIER(OP_MSTORE64, mstore<uint64_t>)     \
     ON_OPCODE_IDENTIFIER(OP_SLOAD, sload)                   \
     ON_OPCODE_IDENTIFIER(OP_SSTORE, sstore)                 \
+    ON_OPCODE_IDENTIFIER(OP_CLOAD, cload)                   \
     ON_OPCODE_IDENTIFIER(OP_JUMP, jump)                     \
     ON_OPCODE_IDENTIFIER(OP_JUMPI, jumpi)                   \
     ON_OPCODE_IDENTIFIER(OP_PC, pc)                         \

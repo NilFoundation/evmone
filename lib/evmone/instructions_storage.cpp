@@ -113,6 +113,16 @@ Result sload(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
     return {EVMC_SUCCESS, gas_left};
 }
 
+Result cload(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
+{
+    auto& x = stack.top();
+    const auto key = intx::be::store<evmc::bytes32>(x);
+
+    x = intx::be::load<uint256>(state.host.get_config(state.msg->recipient, key));
+
+    return {EVMC_SUCCESS, gas_left};
+}
+
 Result sstore(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
 {
     if (state.in_static_mode())

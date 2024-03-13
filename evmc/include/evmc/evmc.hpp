@@ -454,6 +454,9 @@ public:
                                             const bytes32& key,
                                             const bytes32& value) noexcept = 0;
 
+    /// @copydoc evmc_host_interface::get_config
+    virtual bytes32 get_config(const address& addr, const bytes32& key) const noexcept = 0;
+
     /// @copydoc evmc_host_interface::get_balance
     virtual uint256be get_balance(const address& addr) const noexcept = 0;
 
@@ -539,6 +542,11 @@ public:
                                     const bytes32& value) noexcept final
     {
         return host->set_storage(context, &address, &key, &value);
+    }
+
+    bytes32 get_config(const address& address, const bytes32& key) const noexcept final
+    {
+        return host->get_config(context, &address, &key);
     }
 
     uint256be get_balance(const address& address) const noexcept final
@@ -797,6 +805,13 @@ inline evmc_storage_status set_storage(evmc_host_context* h,
     return Host::from_context(h)->set_storage(*addr, *key, *value);
 }
 
+inline evmc_bytes32 get_config(evmc_host_context* h,
+                                const evmc_address* addr,
+                                const evmc_bytes32* key) noexcept
+{
+    return Host::from_context(h)->get_config(*addr, *key);
+}
+
 inline evmc_uint256be get_balance(evmc_host_context* h, const evmc_address* addr) noexcept
 {
     return Host::from_context(h)->get_balance(*addr);
@@ -901,6 +916,7 @@ inline const evmc_host_interface& Host::get_interface() noexcept
         ::evmc::internal::access_storage,
         ::evmc::internal::get_transient_storage,
         ::evmc::internal::set_transient_storage,
+        ::evmc::internal::get_config,
     };
     return interface;
 }
